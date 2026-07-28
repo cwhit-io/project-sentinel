@@ -1,0 +1,107 @@
+services:
+  postgres:
+    image: postgres:16.4
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?set in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-zabbix}
+      TZ: ${TZ:-UTC}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks: [sentinel]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits: { cpus: "2.0", memory: 2G }
+
+  zabbix-server:
+    image: zabbix/zabbix-server-pgsql:ubuntu-7.0.14
+    environment:
+      DB_SERVER_HOST: postgres
+      POSTGRES_USER: ${POSTGRES_USER:?set in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-zabbix}
+      ZBX_STARTPOLLERS: 5
+      ZBX_STARTDISCOVERERS: 2
+      ZBX_STARTHTTPPOLLERS: 2
+      ZBX_HOUSEKEEPINGFREQUENCY: 1
+      TZ: ${TZ:-UTC}
+    depends_on:
+      postgres: { condition: service_healthy }
+    networks: [sentinel]
+    healthcheck:
+      test: ["CMD-SHELL", "zabbix_get -s 127.0.0.1 -k agent.ping || true"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits: { cpus: "2.0", memory: 2G }
+
+  zabbix-web:
+    image: zabbix/zabbix-web-nginx-pgsql:ubuntu-7.0.14
+    environment:
+      ZBX_SERVER_HOST: zabbix-server
+      DB_SERVER_HOST: postgres
+      POSTGRES_USER: ${POSTGRES_USER:?set in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-zabbix}
+      PHP_TZ: ${TZ:-UTC}
+    ports: ["127.0.0.1:${ZBX_WEB_PORT:-8080}:8080"]
+    depends_on:
+      postgres: { condition: service_healthy }
+      zabbix-server: { condition: service_healthy }
+    networks: [sentinel]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8080/ || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  openbao:
+    image: openbao/openbao:2.2.0
+    command: server -config=/openbao/config/config.hcl
+    volumes:
+      - openbao-data:/openbao/data
+      - openbao-audit:/openbao/audit
+      - ./openbao/config:/openbao/config:ro
+      - ./openbao/policies:/openbao/policies:ro
+      - ./private/openbao/tls:/openbao/tls:ro
+    ports: ["127.0.0.1:${OPENBAO_PORT:-18200}:8200"]
+    networks: [sentinel]
+    healthcheck:
+      test: ["CMD", "sh", "-c", "BAO_ADDR=https://127.0.0.1:8200 bao status -tls-skip-verify >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+    profiles: [secrets]
+
+  stackstorm:
+    image: stackstorm/stackstorm:3.8.0
+    ports: ["127.0.0.1:${STACKSTORM_PORT:-18080}:8080"]
+    networks: [sentinel]
+    healthcheck:
+      test: ["CMD-SHELL", "st2 --version >/dev/null 2>&1"]
+      interval: 20s
+      timeout: 10s
+      retries: 10
+    restart: unless-stopped
+    profiles: [automation]
+
+networks:
+  sentinel:
+    name: sentinel-private
+    internal: true
+
+volumes:
+  postgres-data:
+  openbao-data:
+  openbao-audit:

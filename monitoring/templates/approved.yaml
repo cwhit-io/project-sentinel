@@ -1,0 +1,4 @@
+approved_templates:
+  - Template OS Linux by Zabbix agent active
+  - ICMP Ping
+  - Zabbix server health

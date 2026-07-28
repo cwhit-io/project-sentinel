@@ -1,0 +1,16 @@
+{
+  "changes": [
+    {
+      "asset_id": "sample-agent",
+      "hostname": "sample-agent",
+      "operation": "upsert_host",
+      "templates": [
+        "Template OS Linux by Zabbix agent active"
+      ]
+    }
+  ],
+  "mode": "dry-run",
+  "policy_file": "starter.yaml",
+  "requires_review": true,
+  "version": 1
+}

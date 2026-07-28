@@ -1,0 +1,57 @@
+version: 1
+policies:
+  - name: device-unreachable
+    applies_to: [server, network, storage, hypervisor]
+    checks: [agent.ping, icmpping]
+    warning: "unreachable for 3m"
+    critical: "unreachable for 10m"
+    recovery: "reachable for 2m"
+    dependencies: [site-gateway]
+    severity: high
+    notification_route: operations
+    runbook: docs/operations.md#investigate-failed-collection
+    remediation_permitted: false
+  - name: cpu-saturation
+    applies_to: [server, hypervisor]
+    checks: [system.cpu.util]
+    warning: ">= 80% for 10m"
+    critical: ">= 95% for 15m"
+    recovery: "< 75% for 10m"
+    dependencies: []
+    severity: warning
+    notification_route: owner
+    runbook: docs/operations.md#alert-testing
+    remediation_permitted: false
+  - name: filesystem-capacity
+    applies_to: [server, storage]
+    checks: [vfs.fs.size]
+    warning: ">= 80% for 15m"
+    critical: ">= 90% for 15m or predicted exhaustion in 7d"
+    recovery: "< 75% for 15m"
+    dependencies: []
+    severity: high
+    notification_route: owner
+    runbook: docs/operations.md#alert-testing
+    remediation_permitted: false
+  - name: collection-failure
+    applies_to: [server, network, database, environmental, power]
+    checks: ["zabbix[host,agent,available]", "snmp unavailable"]
+    warning: "failure for 5m"
+    critical: "failure for 15m"
+    recovery: "healthy for 5m"
+    dependencies: []
+    severity: high
+    notification_route: operations
+    runbook: docs/operations.md#investigate-failed-collection
+    remediation_permitted: false
+  - name: certificate-expiration
+    applies_to: [application]
+    checks: [web.certificate.get]
+    warning: "expires in 30d"
+    critical: "expires in 7d"
+    recovery: "expires beyond 30d"
+    dependencies: []
+    severity: high
+    notification_route: owner
+    runbook: docs/operations.md#alert-testing
+    remediation_permitted: false

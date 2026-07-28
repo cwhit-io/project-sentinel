@@ -1,0 +1,7 @@
+routes:
+  - id: operations
+    channel: stackstorm-webhook
+    group_by: [site, severity]
+  - id: owner
+    channel: email-or-existing-approved-channel
+    group_by: [owner, severity]

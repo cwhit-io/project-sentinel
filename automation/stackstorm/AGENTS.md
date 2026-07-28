@@ -1,0 +1,1 @@
+Use only reviewed StackStorm packs and named workflows. Never put credentials in event payloads or action parameters. Changes require human approval, dry-run testing, audit verification, and a rollback/escalation path. Do not generate arbitrary remote commands.

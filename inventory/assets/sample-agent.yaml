@@ -1,0 +1,19 @@
+assets:
+  - id: sample-agent
+    hostname: sample-agent
+    address: 127.0.0.1
+    site: lab
+    location: local host
+    category: server
+    vendor: unknown
+    model: virtual
+    collection_method: agent
+    environment: lab
+    criticality: low
+    owner: platform
+    maintenance_window: lab-sunday-0200-0300
+    tags: { role: test, managed: sentinel }
+    credentials: { monitoring: secret://monitoring/lab/sample-agent }
+    templates: [Template OS Linux by Zabbix agent active]
+    notification_policy: lab-notifications
+    remediation_policy: notification-only

@@ -1,0 +1,1 @@
+The reconciliation lifecycle is `discover -> plan -> validate -> review -> apply -> verify -> export`. Unmanaged or conflicting active objects must be reported rather than silently overwritten. The current adapter is deliberately dry-run safe until live credentials and endpoint compatibility are tested.

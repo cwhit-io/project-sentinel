@@ -1,0 +1,28 @@
+dashboards:
+  - name: Infrastructure overview
+    purpose: summary-to-detail health view
+    panels: [problems-by-severity, host-availability, site-health]
+  - name: Active problems by severity
+    purpose: actionable problem queue
+    panels: [problems-by-severity, alert-volume]
+  - name: Site and location health
+    purpose: site rollup
+    panels: [site-health, host-availability]
+  - name: Host availability
+    purpose: collection state
+    panels: [host-availability, collection-failures]
+  - name: Capacity
+    purpose: CPU memory storage trends
+    panels: [cpu-memory, filesystem-capacity]
+  - name: Network health
+    purpose: interface state and utilization
+    panels: [interface-state, interface-errors]
+  - name: Monitoring-system health
+    purpose: Zabbix database and poller health
+    panels: [zabbix-health, database-health]
+  - name: Alert volume and noise
+    purpose: noisy alert analysis
+    panels: [alert-volume, top-noisy-alerts]
+  - name: Remediation activity
+    purpose: approved StackStorm outcomes
+    panels: [remediation-outcomes]
