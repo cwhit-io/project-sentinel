@@ -1,0 +1,86 @@
+apiVersion: sentinel.stackstorm/v1
+kind: ZabbixWebhookBoundary
+metadata:
+  name: zabbix-to-stackstorm
+spec:
+  enabled: false
+  mode: notification-only
+  transport:
+    tls_required: true
+    terminate_at: trusted-reverse-proxy
+    replay_window_seconds: 300
+    signature:
+      canonicalization_version: sentinel-hmac-v1
+      algorithm: hmac-sha256
+      header: X-Sentinel-Signature
+      timestamp_header: X-Sentinel-Timestamp
+      source_identity_header: X-Sentinel-Source
+      secret_ref: secret://stackstorm/zabbix-webhook-hmac  # pragma: allowlist secret -- opaque reference, never a value
+      signed_components:
+        - timestamp-header-value
+        - uppercase-http-method
+        - exact-origin-form-request-target
+        - content-type-header-value
+        - content-encoding-header-value
+        - raw-body-sha256
+        - source-identity-header-value
+      component_separator: lf
+      component_encoding: ascii
+      terminal_separator: none
+      http_method: POST
+      request_path: /api/v1/webhooks/zabbix
+      request_target_form: origin-form-raw-ascii-no-fragment
+      query_handling: preserve-exact-order-repetitions-and-delimiters-no-percent-encoding
+      reject_percent_encoding: true
+      reject_dot_segments: true
+      header_name_matching: case-insensitive
+      header_value_ows: reject-leading-trailing-or-folded
+      content_type: application/json; charset=utf-8
+      content_encoding: identity
+      raw_body: exact-http-message-body-octets-before-content-decoding
+      body_hash_format: sha256-lowercase-hex-64
+      timestamp_format: unix-seconds-ascii-no-leading-zero
+      clock_comparison: integer-unix-seconds
+      window_boundaries: accept-now-minus-window-through-now-plus-window-inclusive
+      mac_format: lowercase-hex-64
+      reject_duplicate_headers: true
+      duplicate_header_scope: all-request-headers-case-insensitive
+      reject_ambiguous_encodings: true
+      transfer_encoding: reject-header-entirely
+      content_length: exactly-one-decimal-no-leading-zero-matches-raw-body-octets
+      empty_body_content_length: exactly-0
+      reject_conflicting_framing: true
+      http2_proxy_normalization: produce-identical-origin-form-request-target-and-raw-body-before-verification
+    replay:
+      key_components: [source-identity, event-id]
+      event_id_bound: true
+      re_signed_event_rejected: true
+      single_use_within_retention: true
+      first_receipt_clock: integer-unix-seconds-at-first-acceptance
+      accepted_future_skew_seconds: 300
+      retention_until: max(first-receipt-plus-window-plus-future-skew,signed-timestamp-plus-window)-inclusive
+    replay_store:
+      consistency: shared-linearizable
+      reservation_operation: atomic-insert-if-absent
+      reservation_timing: after-signature-json-and-schema-validation-before-forwarding
+      store_error_behavior: reject-fail-closed
+      persistence: survives-worker-restart-through-retention
+      expiry_semantics: reject-through-retention-until-inclusive-delete-only-after
+  source:
+    allowed_identities:
+      - zabbix-notification-webhook
+    allowlist_only: true
+  payload:
+    schema: event.schema.yaml
+    json_parser: reject-duplicate-members-at-every-object-depth
+    json_parse_order: before-schema-validation-and-replay-event-id-extraction
+    required: [event_id, asset_id, severity, opaque_reference]
+    forbidden: [password, token, api_key, secret, credential, command]
+    max_bytes: 16384
+  routing:
+    workflow: sentinel.notify_zabbix_event
+    reject_unknown_workflows: true
+  controls:
+    rate_limit_per_minute: 60
+    audit_required: true
+    automatic_remediation: false

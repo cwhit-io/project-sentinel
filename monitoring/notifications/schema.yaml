@@ -1,0 +1,48 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+type: object
+additionalProperties: false
+required: [routes]
+properties:
+  routes:
+    type: array
+    minItems: 2
+    maxItems: 2
+    allOf:
+      - contains:
+          $ref: '#/$defs/operationsRoute'
+        minContains: 1
+        maxContains: 1
+      - contains:
+          $ref: '#/$defs/ownerRoute'
+        minContains: 1
+        maxContains: 1
+    items:
+      oneOf:
+        - $ref: '#/$defs/operationsRoute'
+        - $ref: '#/$defs/ownerRoute'
+$defs:
+  routeBase:
+    type: object
+    additionalProperties: false
+    required: [id, enabled, channel, group_by]
+    properties:
+      id: {type: string}
+      enabled: {type: boolean, const: false}
+      channel: {type: string}
+      group_by:
+        type: array
+        minItems: 1
+        uniqueItems: true
+        items: {type: string, enum: [site, severity, owner, policy]}
+  operationsRoute:
+    allOf:
+      - $ref: '#/$defs/routeBase'
+      - properties:
+          id: {const: operations}
+          channel: {const: stackstorm-webhook}
+  ownerRoute:
+    allOf:
+      - $ref: '#/$defs/routeBase'
+      - properties:
+          id: {const: owner}
+          channel: {const: email-or-existing-approved-channel}

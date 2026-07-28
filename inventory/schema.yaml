@@ -11,20 +11,20 @@ properties:
       required: [id, hostname, address, site, category, collection_method, environment, criticality, owner, maintenance_window, tags, templates, notification_policy, remediation_policy]
       properties:
         id: { type: string, pattern: '^[a-z0-9][a-z0-9-]+$' }
-        hostname: { type: string, minLength: 1 }
-        address: { type: string, minLength: 1 }
-        site: { type: string, minLength: 1 }
-        location: { type: string }
+        hostname: { type: string, minLength: 1, pattern: '^[^\u0000-\u001f\u007f]*$' }
+        address: { type: string, minLength: 1, pattern: '^[^\u0000-\u001f\u007f]*$' }
+        site: { type: string, pattern: '^[a-z0-9][a-z0-9-]+$' }
+        location: { type: string, pattern: '^[^\u0000-\u001f\u007f]*$' }
         category: { enum: [server, network, storage, hypervisor, environmental, power, database, application] }
-        vendor: { type: string }
-        model: { type: string }
+        vendor: { type: string, pattern: '^[^\u0000-\u001f\u007f]*$' }
+        model: { type: string, pattern: '^[^\u0000-\u001f\u007f]*$' }
         collection_method: { enum: [agent, snmp, ipmi, http, api, other] }
         environment: { enum: [production, staging, development, lab] }
         criticality: { enum: [low, medium, high, critical] }
-        owner: { type: string, minLength: 1 }
-        maintenance_window: { type: string, minLength: 1 }
-        tags: { type: object, additionalProperties: { type: string } }
+        owner: { type: string, pattern: '^[a-z0-9][a-z0-9-]+$' }
+        maintenance_window: { type: string, minLength: 1, pattern: '^[^\u0000-\u001f\u007f]*$' }
+        tags: { type: object, additionalProperties: { type: string, pattern: '^[^\u0000-\u001f\u007f]*$' } }
         credentials: { type: object, additionalProperties: { type: string, pattern: '^secret://[A-Za-z0-9][A-Za-z0-9/_-]*$' } }
         templates: { type: array, minItems: 1, items: { type: string, minLength: 1 } }
-        notification_policy: { type: string, minLength: 1 }
-        remediation_policy: { type: string, minLength: 1 }
+        notification_policy: { type: string, pattern: '^[a-z0-9][a-z0-9-]+$' }
+        remediation_policy: { enum: [notification-only] }

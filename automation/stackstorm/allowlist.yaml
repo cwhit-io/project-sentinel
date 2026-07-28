@@ -1,0 +1,28 @@
+apiVersion: sentinel.stackstorm/v1
+kind: WorkflowAllowlist
+metadata:
+  name: notification-only
+spec:
+  enabled: false
+  approval_required: true
+  workflows:
+    - name: sentinel.notify_zabbix_event
+      purpose: forward-approved-event-to-notification-sink
+      mode: notification-only
+      action: sentinel.notify_event
+      target_allowlist: []
+      credentials: none
+      automatic_remediation: false
+      limits:
+        timeout_seconds: 30
+        retries: 0
+        cooldown_seconds: 300
+        concurrency_key: event.asset_id
+      audit:
+        required: true
+        post_action_check: notification-receipt-only
+  reject:
+    - arbitrary_action_names
+    - remote_commands
+    - target_credentials
+    - remediation_actions

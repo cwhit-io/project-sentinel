@@ -1,0 +1,20 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+type: object
+additionalProperties: false
+required: [dashboards]
+properties:
+  dashboards:
+    type: array
+    minItems: 1
+    items:
+      type: object
+      additionalProperties: false
+      required: [name, purpose, panels]
+      properties:
+        name: {type: string, minLength: 1, maxLength: 100}
+        purpose: {type: string, minLength: 1, maxLength: 200}
+        panels:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          items: {type: string, pattern: '^[a-z0-9][a-z0-9-]*$'}

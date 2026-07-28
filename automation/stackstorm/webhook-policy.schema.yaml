@@ -1,0 +1,219 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+type: object
+additionalProperties: false
+required: [apiVersion, kind, metadata, spec]
+properties:
+  apiVersion:
+    type: string
+    const: sentinel.stackstorm/v1
+  kind:
+    type: string
+    const: ZabbixWebhookBoundary
+  metadata:
+    type: object
+    additionalProperties: false
+    required: [name]
+    properties:
+      name:
+        type: string
+        const: zabbix-to-stackstorm
+  spec:
+    type: object
+    additionalProperties: false
+    required: [enabled, mode, transport, source, payload, routing, controls]
+    properties:
+      enabled:
+        type: boolean
+        const: false
+      mode:
+        type: string
+        const: notification-only
+      transport:
+        type: object
+        additionalProperties: false
+        required: [tls_required, terminate_at, replay_window_seconds, signature, replay, replay_store]
+        properties:
+          tls_required:
+            type: boolean
+            const: true
+          terminate_at:
+            type: string
+            const: trusted-reverse-proxy
+          replay_window_seconds:
+            type: integer
+            const: 300
+          signature:
+            type: object
+            additionalProperties: false
+            required: [canonicalization_version, algorithm, header, timestamp_header, source_identity_header, secret_ref, signed_components, component_separator, component_encoding, terminal_separator, http_method, request_path, request_target_form, query_handling, reject_percent_encoding, reject_dot_segments, header_name_matching, header_value_ows, content_type, content_encoding, raw_body, body_hash_format, timestamp_format, clock_comparison, window_boundaries, mac_format, reject_duplicate_headers, duplicate_header_scope, reject_ambiguous_encodings, transfer_encoding, content_length, empty_body_content_length, reject_conflicting_framing, http2_proxy_normalization]
+            properties:
+              canonicalization_version:
+                const: sentinel-hmac-v1
+              algorithm:
+                type: string
+                const: hmac-sha256
+              header:
+                type: string
+                const: X-Sentinel-Signature
+              timestamp_header:
+                type: string
+                const: X-Sentinel-Timestamp
+              source_identity_header:
+                type: string
+                const: X-Sentinel-Source
+              secret_ref:
+                type: string
+                const: secret://stackstorm/zabbix-webhook-hmac
+                pattern: '^secret://[a-z0-9][a-z0-9_-]*(/[a-z0-9][a-z0-9_-]*)+$'
+              signed_components:
+                type: array
+                const: [timestamp-header-value, uppercase-http-method, exact-origin-form-request-target, content-type-header-value, content-encoding-header-value, raw-body-sha256, source-identity-header-value]
+              component_separator:
+                const: lf
+              component_encoding:
+                const: ascii
+              terminal_separator:
+                const: none
+              http_method:
+                const: POST
+              request_path:
+                const: /api/v1/webhooks/zabbix
+              request_target_form:
+                const: origin-form-raw-ascii-no-fragment
+              query_handling:
+                const: preserve-exact-order-repetitions-and-delimiters-no-percent-encoding
+              reject_percent_encoding:
+                const: true
+              reject_dot_segments:
+                const: true
+              header_name_matching:
+                const: case-insensitive
+              header_value_ows:
+                const: reject-leading-trailing-or-folded
+              content_type:
+                const: application/json; charset=utf-8
+              content_encoding:
+                const: identity
+              raw_body:
+                const: exact-http-message-body-octets-before-content-decoding
+              body_hash_format:
+                const: sha256-lowercase-hex-64
+              timestamp_format:
+                const: unix-seconds-ascii-no-leading-zero
+              clock_comparison:
+                const: integer-unix-seconds
+              window_boundaries:
+                const: accept-now-minus-window-through-now-plus-window-inclusive
+              mac_format:
+                const: lowercase-hex-64
+              reject_duplicate_headers:
+                const: true
+              duplicate_header_scope:
+                const: all-request-headers-case-insensitive
+              reject_ambiguous_encodings:
+                const: true
+              transfer_encoding:
+                const: reject-header-entirely
+              content_length:
+                const: exactly-one-decimal-no-leading-zero-matches-raw-body-octets
+              empty_body_content_length:
+                const: exactly-0
+              reject_conflicting_framing:
+                const: true
+              http2_proxy_normalization:
+                const: produce-identical-origin-form-request-target-and-raw-body-before-verification
+          replay:
+            type: object
+            additionalProperties: false
+            required: [key_components, event_id_bound, re_signed_event_rejected, single_use_within_retention, first_receipt_clock, accepted_future_skew_seconds, retention_until]
+            properties:
+              key_components:
+                type: array
+                const: [source-identity, event-id]
+              event_id_bound:
+                const: true
+              re_signed_event_rejected:
+                const: true
+              single_use_within_retention:
+                const: true
+              first_receipt_clock:
+                const: integer-unix-seconds-at-first-acceptance
+              accepted_future_skew_seconds:
+                type: integer
+                const: 300
+              retention_until:
+                const: max(first-receipt-plus-window-plus-future-skew,signed-timestamp-plus-window)-inclusive
+          replay_store:
+            type: object
+            additionalProperties: false
+            required: [consistency, reservation_operation, reservation_timing, store_error_behavior, persistence, expiry_semantics]
+            properties:
+              consistency:
+                const: shared-linearizable
+              reservation_operation:
+                const: atomic-insert-if-absent
+              reservation_timing:
+                const: after-signature-json-and-schema-validation-before-forwarding
+              store_error_behavior:
+                const: reject-fail-closed
+              persistence:
+                const: survives-worker-restart-through-retention
+              expiry_semantics:
+                const: reject-through-retention-until-inclusive-delete-only-after
+      source:
+        type: object
+        additionalProperties: false
+        required: [allowed_identities, allowlist_only]
+        properties:
+          allowed_identities:
+            type: array
+            const: [zabbix-notification-webhook]
+          allowlist_only:
+            type: boolean
+            const: true
+      payload:
+        type: object
+        additionalProperties: false
+        required: [schema, json_parser, json_parse_order, required, forbidden, max_bytes]
+        properties:
+          schema:
+            const: event.schema.yaml
+          json_parser:
+            const: reject-duplicate-members-at-every-object-depth
+          json_parse_order:
+            const: before-schema-validation-and-replay-event-id-extraction
+          required:
+            type: array
+            const: [event_id, asset_id, severity, opaque_reference]
+          forbidden:
+            type: array
+            const: [password, token, api_key, secret, credential, command]
+          max_bytes:
+            type: integer
+            const: 16384
+      routing:
+        type: object
+        additionalProperties: false
+        required: [workflow, reject_unknown_workflows]
+        properties:
+          workflow:
+            type: string
+            const: sentinel.notify_zabbix_event
+          reject_unknown_workflows:
+            type: boolean
+            const: true
+      controls:
+        type: object
+        additionalProperties: false
+        required: [rate_limit_per_minute, audit_required, automatic_remediation]
+        properties:
+          rate_limit_per_minute:
+            type: integer
+            minimum: 1
+            maximum: 60
+          audit_required:
+            type: boolean
+            const: true
+          automatic_remediation:
+            type: boolean
+            const: false

@@ -1,16 +1,23 @@
 {
+  "approval_required": true,
   "changes": [
     {
       "asset_id": "sample-agent",
+      "criticality": "low",
       "hostname": "sample-agent",
       "operation": "upsert_host",
+      "owner": "platform",
+      "site": "lab",
       "templates": [
         "Template OS Linux by Zabbix agent active"
       ]
     }
   ],
+  "drift": [],
+  "integrity": "acce82be7d00cb4a4274a695950865d5758ff3ba733a384f1824b7ebafbdb441",
   "mode": "dry-run",
   "policy_file": "starter.yaml",
   "requires_review": true,
-  "version": 1
+  "source": "desired-state",
+  "version": 2
 }

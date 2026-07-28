@@ -1,7 +1,9 @@
 routes:
   - id: operations
+    enabled: false
     channel: stackstorm-webhook
     group_by: [site, severity]
   - id: owner
+    enabled: false
     channel: email-or-existing-approved-channel
     group_by: [owner, severity]

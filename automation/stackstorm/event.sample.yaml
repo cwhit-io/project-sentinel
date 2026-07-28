@@ -1,0 +1,4 @@
+event_id: event-20260728-0001
+asset_id: lab-agent-01
+severity: warning
+opaque_reference: ref://zabbix/events/event-20260728-0001

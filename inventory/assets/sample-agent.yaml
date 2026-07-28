@@ -15,5 +15,5 @@ assets:
     tags: { role: test, managed: sentinel }
     credentials: { monitoring: secret://monitoring/lab/sample-agent }
     templates: [Template OS Linux by Zabbix agent active]
-    notification_policy: lab-notifications
+    notification_policy: operations
     remediation_policy: notification-only

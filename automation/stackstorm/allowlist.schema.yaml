@@ -1,0 +1,106 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+type: object
+additionalProperties: false
+required: [apiVersion, kind, metadata, spec]
+properties:
+  apiVersion:
+    type: string
+    const: sentinel.stackstorm/v1
+  kind:
+    type: string
+    const: WorkflowAllowlist
+  metadata:
+    type: object
+    additionalProperties: false
+    required: [name]
+    properties:
+      name:
+        type: string
+        const: notification-only
+  spec:
+    type: object
+    additionalProperties: false
+    required: [enabled, approval_required, workflows, reject]
+    properties:
+      enabled:
+        type: boolean
+        const: false
+      approval_required:
+        type: boolean
+        const: true
+      workflows:
+        type: array
+        minItems: 1
+        maxItems: 1
+        items:
+          type: object
+          additionalProperties: false
+          required:
+            - name
+            - purpose
+            - mode
+            - action
+            - target_allowlist
+            - credentials
+            - automatic_remediation
+            - limits
+            - audit
+          properties:
+            name:
+              type: string
+              const: sentinel.notify_zabbix_event
+            purpose:
+              type: string
+              const: forward-approved-event-to-notification-sink
+            mode:
+              type: string
+              const: notification-only
+            action:
+              type: string
+              const: sentinel.notify_event
+            target_allowlist:
+              type: array
+              maxItems: 0
+            credentials:
+              type: string
+              const: none
+            automatic_remediation:
+              type: boolean
+              const: false
+            limits:
+              type: object
+              additionalProperties: false
+              required: [timeout_seconds, retries, cooldown_seconds, concurrency_key]
+              properties:
+                timeout_seconds:
+                  type: integer
+                  minimum: 1
+                  maximum: 30
+                retries:
+                  type: integer
+                  const: 0
+                cooldown_seconds:
+                  type: integer
+                  minimum: 300
+                  maximum: 86400
+                concurrency_key:
+                  type: string
+                  const: event.asset_id
+            audit:
+              type: object
+              additionalProperties: false
+              required: [required, post_action_check]
+              properties:
+                required:
+                  type: boolean
+                  const: true
+                post_action_check:
+                  type: string
+                  const: notification-receipt-only
+      reject:
+        type: array
+        const:
+          - arbitrary_action_names
+          - remote_commands
+          - target_credentials
+          - remediation_actions

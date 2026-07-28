@@ -1,16 +1,14 @@
 # Sentinel
 
-Sentinel is a self-hosted, Git-driven infrastructure monitoring baseline. Zabbix monitors approved assets, PostgreSQL stores Zabbix state, StackStorm receives approved automation events, OpenBao stores credentials, and a small operator turns reviewed YAML into deterministic Zabbix plans.
+Sentinel is a self-hosted, Git-driven infrastructure monitoring commissioning baseline. The intended design uses Zabbix for monitoring, PostgreSQL for Zabbix state, StackStorm for approved automation events, OpenBao for credentials, and a small operator for deterministic Zabbix plans. This repository is non-operational and is not production-ready.
 
-## Start
+## Current Status
 
-1. Copy `.env.example` to `.env` and set local values using a protected secret mechanism. Do not put credentials in Git.
-2. Start only verified services: `docker compose up -d` (OpenBao is a separate protected commissioning step; never start it in dev mode).
-3. Validate: `python scripts/sentinel.py validate && python scripts/sentinel.py catalog`.
-4. Check services: `docker compose ps` and open the Zabbix UI on the trusted host boundary.
-5. Generate a no-op plan: `python scripts/sentinel.py plan --dry-run`.
+The recorded work includes local/static evidence and one torn-down disposable core runtime. PostgreSQL, Zabbix server, and Zabbix web were started with a synthetic database secret; no production services, real credentials, recovery material, or targets were used. Compose has no runnable StackStorm service; its contracts remain disabled intent. The current test count is recorded in `STATUS.md`; earlier lower-count runs are historical. Do not use this checkout with real credentials or real monitoring targets.
 
-The sample inventory contains no real credentials and does not claim that a production asset is monitored. Add a real asset with a `secret://` reference, enroll it with `sentinel credentials add <name>`, review the plan, and apply only after connectivity and ownership have been confirmed.
+The implementation can validate the sample inventory and build a review-required dry-run plan. Apply is unconditionally disabled: it rejects before parsing or mutation and writes no receipt. Export reports that no live export was performed.
+
+The sample inventory contains no real credentials and does not claim that any asset is monitored. Credential enrollment, live connectivity, review/apply, and production bootstrap are not commissioning evidence and require a separate protected, approved procedure.
 
 ## Layout
 
@@ -20,5 +18,5 @@ The sample inventory contains no real credentials and does not claim that a prod
 - `scripts/`: operator, backup, and validation entry points
 - `docs/`: architecture, operations, recovery, security, and generated monitoring catalog
 
-See `docs/architecture.md` and `docs/operations.md`. This repository intentionally does not ship production credentials, a public ingress, or a claim of runtime verification in an environment where Docker and target infrastructure were unavailable during setup.
+See `STATUS.md`, `docs/architecture.md`, and `docs/operations.md`. This repository intentionally does not ship production credentials or a public ingress, and makes no full runtime acceptance or production-readiness claim.
 OpenBao bootstrap and recovery are documented in `docs/openbao.md`; image verification status is in `docs/images.md`.

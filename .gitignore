@@ -1,6 +1,7 @@
 .env
 .env.*
 !.env.example
+.envrc
 .venv/
 *.secret
 *.token
@@ -14,9 +15,18 @@ credentials/
 private/
 openbao/data/
 openbao/audit/
+openbao/tls/
+openbao/recovery/
+openbao/init.json
+openbao/*.hcl.local
 *.dump
 *.sql
 backups/
+*.bak
+*.backup
+*.log
+*.pid
+*.sock
 *.py[cod]
 __pycache__/
 monitoring/exports/apply-receipt.json

@@ -1,14 +1,16 @@
+# Readable tags are locked to the tested local repository digests. These immutable
+# references are not signature, publisher, provenance, or production acceptance.
 services:
   postgres:
-    image: postgres:16.4
+    image: postgres:16.4@sha256:e62fbf9d3e2b49816a32c400ed2dba83e3b361e6833e624024309c35d334b412
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:?set in .env}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set in .env}
+      POSTGRES_USER: ${POSTGRES_USER:?set via protected environment}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set via protected environment}
       POSTGRES_DB: ${POSTGRES_DB:-zabbix}
       TZ: ${TZ:-UTC}
     volumes:
       - postgres-data:/var/lib/postgresql/data
-    networks: [sentinel]
+    networks: [database]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 10s
@@ -18,13 +20,14 @@ services:
     deploy:
       resources:
         limits: { cpus: "2.0", memory: 2G }
+    security_opt: [no-new-privileges:true]
 
   zabbix-server:
-    image: zabbix/zabbix-server-pgsql:ubuntu-7.0.14
+    image: zabbix/zabbix-server-pgsql:ubuntu-7.0.14@sha256:f5115f824d5c0e619bd5af63e42c89e87a46d0b83231d05cdb7211edee66a77b
     environment:
       DB_SERVER_HOST: postgres
-      POSTGRES_USER: ${POSTGRES_USER:?set in .env}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set in .env}
+      POSTGRES_USER: ${POSTGRES_USER:?set via protected environment}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set via protected environment}
       POSTGRES_DB: ${POSTGRES_DB:-zabbix}
       ZBX_STARTPOLLERS: 5
       ZBX_STARTDISCOVERERS: 2
@@ -33,75 +36,129 @@ services:
       TZ: ${TZ:-UTC}
     depends_on:
       postgres: { condition: service_healthy }
-    networks: [sentinel]
+    ports: ["127.0.0.1:${ZBX_SERVER_PORT:-10051}:10051"]
+    networks: [database, application, monitoring, zabbix-operator]
     healthcheck:
-      test: ["CMD-SHELL", "zabbix_get -s 127.0.0.1 -k agent.ping || true"]
+      test: ["CMD-SHELL", "pgrep -x zabbix_server >/dev/null"]
       interval: 15s
       timeout: 5s
       retries: 10
     restart: unless-stopped
+    security_opt: [no-new-privileges:true]
     deploy:
       resources:
         limits: { cpus: "2.0", memory: 2G }
 
+  synthetic-zabbix-agent:
+    # Disposable lab target only. Never use this service as a production host.
+    image: zabbix/zabbix-agent2:ubuntu-7.0.14@sha256:0cdb9c87064d3fb604cfcc10721a90c7e69ffb2aec8310ba3282ee1dc9c700de
+    profiles: [lab]
+    environment:
+      ZBX_SERVER_HOST: zabbix-server
+      ZBX_HOSTNAME: sentinel-lab-agent
+      TZ: ${TZ:-UTC}
+    depends_on:
+      zabbix-server: { condition: service_healthy }
+    networks: [monitoring]
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -x zabbix_agent2 >/dev/null"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    restart: "no"
+    security_opt: [no-new-privileges:true]
+    deploy:
+      resources:
+        limits: { cpus: "0.25", memory: 128M }
+
   zabbix-web:
-    image: zabbix/zabbix-web-nginx-pgsql:ubuntu-7.0.14
+    image: zabbix/zabbix-web-nginx-pgsql:ubuntu-7.0.14@sha256:83f6e5bead0344d14f185373650d3ece3f902c95717eaa87e5a9b1b9d28512e2
     environment:
       ZBX_SERVER_HOST: zabbix-server
       DB_SERVER_HOST: postgres
-      POSTGRES_USER: ${POSTGRES_USER:?set in .env}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set in .env}
+      POSTGRES_USER: ${POSTGRES_USER:?set via protected environment}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set via protected environment}
       POSTGRES_DB: ${POSTGRES_DB:-zabbix}
       PHP_TZ: ${TZ:-UTC}
     ports: ["127.0.0.1:${ZBX_WEB_PORT:-8080}:8080"]
     depends_on:
       postgres: { condition: service_healthy }
       zabbix-server: { condition: service_healthy }
-    networks: [sentinel]
+    networks: [database, application, zabbix-operator]
     healthcheck:
-      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8080/ || exit 1"]
+      test: ["CMD-SHELL", "curl -fsS -o /dev/null http://127.0.0.1:8080/ || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 10
     restart: unless-stopped
+    security_opt: [no-new-privileges:true]
 
   openbao:
-    image: openbao/openbao:2.2.0
-    command: server -config=/openbao/config/config.hcl
+    image: openbao/openbao:2.2.0@sha256:19612d67a4a95d05a7b77c6ebc6c2ac5dac67a8712d8df2e4c31ad28bee7edaa
+    # Bypass docker-entrypoint.sh: it attempts chown on the read-only config mount.
+    # The pinned image's entrypoint binary is invoked directly. Docker's user lookup
+    # does not resolve the image's named `bao` account on the commissioning host.
+    # Root is an explicit disposable-runtime compatibility mode for named-volume
+    # paths. All capabilities are dropped, then IPC_LOCK and DAC_READ_SEARCH are
+    # added. DAC_READ_SEARCH is a broad process-wide capability accepted only for
+    # isolated commissioning so the process can traverse the operator-owned 0700
+    # TLS directory and read its 0600 key without weakening host permissions.
+    # DAC_OVERRIDE remains prohibited, as does production use. Sealed/uninitialized
+    # compatibility is evidenced; bootstrap and production acceptance remain blocked.
+    entrypoint: ["bao"]
+    command: ["server", "-config=/openbao/config/config.hcl"]
+    user: "0:0"
     volumes:
       - openbao-data:/openbao/data
       - openbao-audit:/openbao/audit
       - ./openbao/config:/openbao/config:ro
       - ./openbao/policies:/openbao/policies:ro
       - ./private/openbao/tls:/openbao/tls:ro
+    # Override image-declared anonymous writable volumes; configured file storage
+    # and audit output remain on the named /openbao/data and /openbao/audit mounts.
+    tmpfs:
+      - /openbao/file:rw,nosuid,nodev,noexec,mode=0700
+      - /openbao/logs:rw,nosuid,nodev,noexec,mode=0700
     ports: ["127.0.0.1:${OPENBAO_PORT:-18200}:8200"]
-    networks: [sentinel]
+    networks: [secrets, openbao-operator]
     healthcheck:
-      test: ["CMD", "sh", "-c", "BAO_ADDR=https://127.0.0.1:8200 bao status -tls-skip-verify >/dev/null 2>&1"]
+      test: ["CMD-SHELL", "BAO_ADDR=https://openbao:8200 BAO_CACERT=/openbao/tls/ca.crt bao status >/dev/null 2>&1; status=$$?; [ \"$$status\" -eq 0 ] || [ \"$$status\" -eq 2 ]"]
       interval: 10s
       timeout: 5s
       retries: 10
     restart: unless-stopped
     profiles: [secrets]
-
-  stackstorm:
-    image: stackstorm/stackstorm:3.8.0
-    ports: ["127.0.0.1:${STACKSTORM_PORT:-18080}:8080"]
-    networks: [sentinel]
-    healthcheck:
-      test: ["CMD-SHELL", "st2 --version >/dev/null 2>&1"]
-      interval: 20s
-      timeout: 10s
-      retries: 10
-    restart: unless-stopped
-    profiles: [automation]
+    read_only: true
+    cap_add: [IPC_LOCK, DAC_READ_SEARCH]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
 
 networks:
-  sentinel:
-    name: sentinel-private
+  database:
+    name: ${SENTINEL_NAMESPACE:-sentinel}-database
     internal: true
+  application:
+    name: ${SENTINEL_NAMESPACE:-sentinel}-application
+    internal: true
+  monitoring:
+    name: ${SENTINEL_NAMESPACE:-sentinel}-monitoring
+    internal: true
+  secrets:
+    name: ${SENTINEL_NAMESPACE:-sentinel}-secrets
+    internal: true
+  # Commissioning-only paths for loopback-published operator ports.
+  # no shared operator bridge; routed/host/egress paths remain unverified.
+  openbao-operator:
+    name: ${SENTINEL_NAMESPACE:-sentinel}-openbao-operator
+    internal: false
+  zabbix-operator:
+    name: ${SENTINEL_NAMESPACE:-sentinel}-zabbix-operator
+    internal: false
 
 volumes:
   postgres-data:
+    name: ${SENTINEL_NAMESPACE:-sentinel}-postgres-data
   openbao-data:
+    name: ${SENTINEL_NAMESPACE:-sentinel}-openbao-data
   openbao-audit:
+    name: ${SENTINEL_NAMESPACE:-sentinel}-openbao-audit

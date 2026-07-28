@@ -1,0 +1,25 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://sentinel.invalid/schemas/stackstorm/event-v1.schema.json
+title: Sentinel StackStorm notification event v1
+type: object
+additionalProperties: false
+required: [event_id, asset_id, severity, opaque_reference]
+properties:
+  event_id:
+    type: string
+    minLength: 1
+    maxLength: 128
+    pattern: '^[A-Za-z0-9][A-Za-z0-9._:-]*$'
+  asset_id:
+    type: string
+    minLength: 2
+    maxLength: 63
+    pattern: '^[a-z0-9][a-z0-9-]+$'
+  severity:
+    type: string
+    enum: [not-classified, information, warning, average, high, disaster]
+  opaque_reference:
+    type: string
+    minLength: 12
+    maxLength: 512
+    pattern: '^ref://[A-Za-z0-9][A-Za-z0-9._~-]*(/[A-Za-z0-9][A-Za-z0-9._~-]*)+$'
