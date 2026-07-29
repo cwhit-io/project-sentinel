@@ -1,0 +1,12 @@
+version: sentinel.zabbix-api/v1
+transport: protected-read-discovery-or-inert-mock
+api_version: 7.0.14
+roles:
+  read: [apiinfo.version, host.get, hostgroup.get, httptest.get, item.get, template.get]
+methods:
+  apiinfo.version: { request_fields: [], response_fields: [] }
+  host.get: { request_fields: [output, selectInterfaces, selectTags, selectParentTemplates, selectHostGroups, filter, tags], response_fields: [hostid, host, name, status, tls_connect, tls_accept, interfaces, tags, parentTemplates, hostgroups] }
+  template.get: { request_fields: [output, filter], response_fields: [templateid, host] }
+  hostgroup.get: { request_fields: [output, filter], response_fields: [groupid, name] }
+  httptest.get: { request_fields: [output, hostids], response_fields: [httptestid, name, hostid] }
+  item.get: { request_fields: [output, hostids, webitems], response_fields: [itemid, name, key_, hostid] }

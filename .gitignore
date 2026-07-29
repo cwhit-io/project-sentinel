@@ -22,6 +22,7 @@ openbao/*.hcl.local
 *.dump
 *.sql
 backups/
+*.lock
 *.bak
 *.backup
 *.log

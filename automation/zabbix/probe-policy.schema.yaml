@@ -1,0 +1,65 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+type: object
+additionalProperties: false
+required: [version, transport, api_version, roles, methods]
+properties:
+  version: { const: sentinel.zabbix-probe-api/v1 }
+  transport: { const: protected-write-discovery-or-inert-mock }
+  api_version: { const: 7.0.14 }
+  roles:
+    type: object
+    additionalProperties: false
+    required: [probe, unavailable]
+    properties:
+      probe:
+        type: array
+        uniqueItems: true
+        items:
+          enum: [host.create, host.update, httptest.create, httptest.update, item.create, item.update]
+      unavailable:
+        type: array
+        uniqueItems: true
+        items:
+          enum: [host.delete, httptest.delete, item.delete]
+  methods:
+    type: object
+    additionalProperties: false
+    required: [host.create, host.update, httptest.create, httptest.update, item.create, item.update, host.delete, httptest.delete, item.delete]
+    properties:
+      host.create: { $ref: '#/$defs/method' }
+      host.update: { $ref: '#/$defs/method' }
+      httptest.create: { $ref: '#/$defs/method' }
+      httptest.update: { $ref: '#/$defs/method' }
+      item.create: { $ref: '#/$defs/method' }
+      item.update: { $ref: '#/$defs/method' }
+      host.delete: { $ref: '#/$defs/deletedMethod' }
+      httptest.delete: { $ref: '#/$defs/deletedMethod' }
+      item.delete: { $ref: '#/$defs/deletedMethod' }
+$defs:
+  method:
+    type: object
+    additionalProperties: false
+    required: [request_fields, response_fields]
+    properties:
+      request_fields:
+        type: array
+        uniqueItems: true
+        items: { type: string, minLength: 1 }
+      response_fields:
+        type: array
+        uniqueItems: true
+        items: { type: string, minLength: 1 }
+  deletedMethod:
+    type: object
+    additionalProperties: false
+    required: [request_fields, response_fields, executor]
+    properties:
+      request_fields:
+        type: array
+        uniqueItems: true
+        items: { type: string, minLength: 1 }
+      response_fields:
+        type: array
+        uniqueItems: true
+        items: { type: string, minLength: 1 }
+      executor: { const: none }

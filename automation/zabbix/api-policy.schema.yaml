@@ -1,0 +1,39 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+type: object
+additionalProperties: false
+required: [version, transport, api_version, roles, methods]
+properties:
+  version: { const: sentinel.zabbix-api/v1 }
+  transport: { const: protected-read-discovery-or-inert-mock }
+  api_version: { const: 7.0.14 }
+  roles:
+    type: object
+    additionalProperties: false
+    required: [read]
+    properties:
+      read: { const: [apiinfo.version, host.get, hostgroup.get, httptest.get, item.get, template.get] }
+  methods:
+    type: object
+    additionalProperties: false
+    required: [apiinfo.version, host.get, template.get, hostgroup.get, httptest.get, item.get]
+    properties:
+      apiinfo.version: { $ref: '#/$defs/method' }
+      host.get: { $ref: '#/$defs/method' }
+      template.get: { $ref: '#/$defs/method' }
+      hostgroup.get: { $ref: '#/$defs/method' }
+      httptest.get: { $ref: '#/$defs/method' }
+      item.get: { $ref: '#/$defs/method' }
+$defs:
+  method:
+    type: object
+    additionalProperties: false
+    required: [request_fields, response_fields]
+    properties:
+      request_fields:
+        type: array
+        uniqueItems: true
+        items: { type: string, minLength: 1 }
+      response_fields:
+        type: array
+        uniqueItems: true
+        items: { type: string, minLength: 1 }

@@ -1,0 +1,7 @@
+version: sentinel.zabbix-delete-api/v1
+transport: unavailable
+methods:
+  host.delete:
+    request_fields: [hostids]
+    response_fields: [hostids]
+    executor: none

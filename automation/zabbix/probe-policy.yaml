@@ -1,0 +1,16 @@
+version: sentinel.zabbix-probe-api/v1
+transport: protected-write-discovery-or-inert-mock
+api_version: 7.0.14
+roles:
+  probe: [host.create, host.update, httptest.create, httptest.update, item.create, item.update]
+  unavailable: [host.delete, httptest.delete, item.delete]
+methods:
+  host.create: { request_fields: [host, groups, status], response_fields: [hostids] }
+  host.update: { request_fields: [hostid], response_fields: [hostids] }
+  httptest.create: { request_fields: [hostid, name, steps], response_fields: [httptestids] }
+  httptest.update: { request_fields: [httptestid], response_fields: [httptestids] }
+  item.create: { request_fields: [hostid, name, key_], response_fields: [itemids] }
+  item.update: { request_fields: [itemid], response_fields: [itemids] }
+  host.delete: { request_fields: [hostids], response_fields: [hostids], executor: none }
+  httptest.delete: { request_fields: [httptestid], response_fields: [httptestids], executor: none }
+  item.delete: { request_fields: [itemid], response_fields: [itemids], executor: none }

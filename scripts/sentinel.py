@@ -1,21 +1,20 @@
 #!/usr/bin/env python3
 import argparse
-import getpass
 import hmac
 import html
 import json
-import os
 import re
 import sys
 from pathlib import Path
 from typing import Any
-from urllib.request import Request, urlopen
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import yaml
 from jsonschema import Draft202012Validator
 from jsonschema import validate as validate_schema
 from automation.reconciliation.planner import build_plan, canonical_json, load_yaml, plan_integrity
+from automation.reconciliation.v3 import normalize_desired
+from automation.zabbix.client import validate_policy_files
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -273,6 +272,7 @@ def validate() -> None:
     validate_schema(policies, policy_schema)
     validate_schema(routes, route_schema)
     validate_schema(dashboards, dashboard_schema)
+    validate_policy_files()
     _validate_stackstorm_contracts()
     ids = _unique([asset["id"] for asset in inventory["assets"]], "asset ID")
     for asset in inventory["assets"]:
@@ -281,6 +281,8 @@ def validate() -> None:
                 raise ValueError(f"credential {name} is not an opaque reference")
     approved = _validate_templates()
     _cross_validate(inventory, policies, routes, dashboards, approved)
+    # Validate the mocked-first v3 desired contract without discovery or API use.
+    normalize_desired({"target_id": "validation-only"}, inventory["assets"], approved)
     output = build_plan(ROOT / "inventory", ROOT / "monitoring/policies/starter.yaml", approved)
     if "secret://" in json.dumps(output) or str(ROOT) in json.dumps(output):
         raise ValueError("plan contains sensitive or local path material")
@@ -288,32 +290,8 @@ def validate() -> None:
 
 
 def _credential_name_is_safe(name: str) -> bool:
+    """Validate opaque-reference names only; no credential CLI/provider exists."""
     return isinstance(name, str) and bool(re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9/_-]*", name)) and all(ord(c) >= 32 for c in name)
-
-
-def credential_flow(action: str, name: str) -> None:
-    if not _credential_name_is_safe(name):
-        raise ValueError("credential name must be a relative secret path")
-    address = os.environ.get("OPENBAO_ADDR", "http://127.0.0.1:18200")
-    token = os.environ.get("OPENBAO_TOKEN")
-    if not token:
-        raise RuntimeError("OPENBAO_TOKEN must be provided by a protected local secret loader")
-    path = f"/v1/secret/data/{name}"
-    headers = {"X-Vault-Token": token, "Content-Type": "application/json"}
-    if action in {"add", "rotate"}:
-        value = getpass.getpass("Secret value (input hidden): ")
-        try:
-            request = Request(address + path, data=json.dumps({"data": {"value": value}}).encode(), headers=headers, method="POST")
-            with urlopen(request, timeout=10) as response:
-                response.read()
-        finally:
-            value = None
-        print(f"{action} complete: secret://{name} (redacted)")
-    else:
-        method = "DELETE" if action == "revoke" else "GET"
-        with urlopen(Request(address + path, headers=headers, method=method), timeout=10) as response:
-            response.read()
-        print(f"{action} complete: secret://{name} (redacted)")
 
 
 def _catalog_value(value: Any) -> str:
@@ -497,18 +475,25 @@ def main() -> None:
     a.add_argument("--approve", action="store_true")
     r = sub.add_parser("rollback")
     r.add_argument("plan")
+    rc = sub.add_parser("reconcile")
+    rc.add_argument("--source", choices=["desired-state", "live-discovery"], default="desired-state")
+    rc.add_argument("--apply-if-signed", action="store_true")
+    rc.add_argument("--scope", required=True)
+    rc.add_argument("--credential-handle", default=None)
+    rc.add_argument("--dry-run", action="store_true")
+    rc.add_argument("--state-dir", default=str(Path("~/sentinel-state").expanduser()))
+    rc.add_argument("--approval-key", default=None)
     sub.add_parser("export")
-    cred = sub.add_parser("credentials").add_subparsers(dest="credential_command", required=True)
-    for name in ["add", "rotate", "test", "revoke"]:
-        cred.add_parser(name).add_argument("name")
     args = parser.parse_args()
     if args.command == "validate": validate()
     elif args.command == "catalog": catalog()
     elif args.command == "plan": plan(args.dry_run)
     elif args.command == "apply": apply_plan(args.plan, args.approve)
     elif args.command == "rollback": rollback(args.plan)
+    elif args.command == "reconcile":
+        from automation.reconciliation.cli import build_read_client, reconcile_main
+        sys.exit(reconcile_main(args, root=ROOT, read_client_factory=build_read_client))
     elif args.command == "export": print("Export requires a configured read-only Zabbix API identity; no live export performed")
-    elif args.command == "credentials": credential_flow(args.credential_command, args.name)
 
 
 if __name__ == "__main__":

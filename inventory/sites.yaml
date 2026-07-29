@@ -3,3 +3,7 @@ sites:
     name: Local Test Lab
     location: local
     timezone: UTC
+  - id: public
+    name: Public Internet
+    location: external
+    timezone: UTC

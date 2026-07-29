@@ -1,19 +1,23 @@
 assets:
-  - id: sample-agent
-    hostname: sample-agent
-    address: 127.0.0.1
+  - id: sentinel-lab-agent
+    hostname: sentinel-lab-agent
+    interface:
+      address_kind: dns
+      address: synthetic-zabbix-agent
+      port: 10050
+      encryption: none
+    host_groups: [Linux servers]
     site: lab
-    location: local host
+    location: disposable local commissioning beta
     category: server
-    vendor: unknown
-    model: virtual
+    vendor: Sentinel synthetic fixture
+    model: Zabbix agent container
     collection_method: agent
     environment: lab
     criticality: low
     owner: platform
     maintenance_window: lab-sunday-0200-0300
-    tags: { role: test, managed: sentinel }
-    credentials: { monitoring: secret://monitoring/lab/sample-agent }
-    templates: [Template OS Linux by Zabbix agent active]
+    tags: { role: synthetic-agent, scope: disposable-beta }
+    templates: [Linux by Zabbix agent]
     notification_policy: operations
     remediation_policy: notification-only

@@ -6,7 +6,8 @@
 
 | ID | Host | Site | Category | Criticality | Owner |
 |---|---|---|---|---|---|
-| sample-agent | sample-agent | lab | server | low | platform |
+| bhm-org-uptime | bhm-org-uptime | public | application | low | platform |
+| sentinel-lab-agent | sentinel-lab-agent | lab | server | low | platform |
 
 ## Policies
 

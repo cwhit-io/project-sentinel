@@ -1,0 +1,26 @@
+assets:
+  - id: bhm-org-uptime
+    hostname: bhm-org-uptime
+    site: public
+    location: external public-internet uptime probe
+    category: application
+    vendor: external
+    collection_method: http
+    environment: production
+    criticality: low
+    owner: platform
+    maintenance_window: none
+    host_groups: [Sentinel external uptime]
+    tags: { scope: public-uptime }
+    templates: []
+    http_checks:
+      - name: homepage
+        url: https://blackhawkministries.org/
+        method: GET
+        interval_seconds: 60
+        timeout_seconds: 10
+        expected_status_codes: [200]
+        follow_redirects: true
+        verify_tls: true
+    notification_policy: operations
+    remediation_policy: notification-only
